@@ -1,0 +1,40 @@
+name: notion patch note
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  notion-versioning:
+    if: github.event.pull_request.merged == true
+    name: notion-versioning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: git_checkout
+        uses: actions/checkout@v3
+        with:
+          path: notion-github-integration-test
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+            python-version: 3.11
+            
+      - name: Install python dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install requests
+
+      - name: write patch note
+        id: write-patch-note
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
+        run: |
+          CURR_COMMIT_ID="DEV-${GITHUB_SHA:0:12}"
+          pushd notion-github-integration-test/.github/workflows
+          python write_notion_patch_note.py ${{ secrets.GH_API_TOKEN }} ${{ secrets.NOTION_API_TOKEN }} ${{ github.event.pull_request.number }} ${CURR_COMMIT_ID}
+          popd
